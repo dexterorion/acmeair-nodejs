@@ -27,12 +27,6 @@ var flightDataCacheTTL = settings.flightDataCacheTTL == -1 ? null : settings.fli
 var logger = log4js.getLogger('routes');
 logger.level = settings.loggerLevel;
 
-async function insertOne(collectionname, doc) {
-    logger.debug("insertOne: "+collectionname+" - " + doc);
-    const dataaccess = await getDataAccess();
-    return await dataaccess.insertOne(collectionname, doc);
-}
-
 async function checkForValidSessionCookie(req, res, next) {
     logger.debug('checkForValidCookie');
     var sessionid = req.cookies.sessionid;
@@ -261,8 +255,7 @@ function getActiveDataServiceInfo(req, res) {
 
 async function countBookings(req, res) {
     try {
-        const dataaccess = await getDataAccess();
-        const count = await countItems(dataaccess.dbNames.bookingName);
+        const count = await countBookingsDB();
         res.send(count.toString());
     } catch (error) {
         res.send("-1");
@@ -271,8 +264,7 @@ async function countBookings(req, res) {
 
 async function countCustomer(req, res) {
     try {
-        const dataaccess = await getDataAccess();
-        const count = await countItems(dataaccess.dbNames.customerName);
+        const count = await countCustomersDB();
         res.send(count.toString());
     } catch (error) {
         res.send("-1");
@@ -281,8 +273,7 @@ async function countCustomer(req, res) {
 
 async function countCustomerSessions(req, res) {
     try {
-        const dataaccess = await getDataAccess();
-        const count = await countItems(dataaccess.dbNames.customerSessionName);
+        const count = await countCustomerSessionsDB();
         res.send(count.toString());
     } catch (error) {
         res.send("-1");
@@ -291,8 +282,7 @@ async function countCustomerSessions(req, res) {
 
 async function countFlights(req, res) {
     try {
-        const dataaccess = await getDataAccess();
-        const count = await countItems(dataaccess.dbNames.flightName);
+        const count = await countFlightsDB();
         res.send(count.toString());
     } catch (error) {
         res.send("-1");
@@ -301,8 +291,7 @@ async function countFlights(req, res) {
 
 async function countFlightSegments(req, res) {
     try {
-        const dataaccess = await getDataAccess();
-        const count = await countItems(dataaccess.dbNames.flightSegmentName);
+        const count = await countFlightSegmentsDB();
         res.send(count.toString());
     } catch (error) {
         res.send("-1");
@@ -311,19 +300,47 @@ async function countFlightSegments(req, res) {
 
 async function countAirports(req, res) {
     try {
-        const dataaccess = await getDataAccess();
-        const count = await countItems(dataaccess.dbNames.airportCodeMappingName);
+        const count = await countAirportsDB();
         res.send(count.toString());
     } catch (error) {
+        console.log(error);
         res.send("-1");
     }
-
 };
 
-async function countItems(dbName) {
-    console.log("Calling count on " + dbName);
+async function countBookingsDB() {
     const dataaccess = await getDataAccess();
-    const count = await dataaccess.count(dbName, {});
+    const count = await dataaccess.count(dataaccess.dbNames.bookingName, {});
+    return count;
+};
+
+async function countCustomersDB() {
+    const dataaccess = await getDataAccess();
+    const count = await dataaccess.count(dataaccess.dbNames.customerName, {});
+    return count;
+};
+
+async function countCustomerSessionsDB() {
+    const dataaccess = await getDataAccess();
+    const count = await dataaccess.count(dataaccess.dbNames.customerSessionName, {});
+    return count;
+};
+
+async function countFlightsDB() {
+    const dataaccess = await getDataAccess();
+    const count = await dataaccess.count(dataaccess.dbNames.flightName, {});
+    return count;
+};
+
+async function countFlightSegmentsDB() {
+    const dataaccess = await getDataAccess();
+    const count = await dataaccess.count(dataaccess.dbNames.flightSegmentName, {});
+    return count;
+};
+
+async function countAirportsDB() {
+    const dataaccess = await getDataAccess();
+    const count = await dataaccess.count(dataaccess.dbNames.airportCodeMappingName, {});
     return count;
 };
 
@@ -463,7 +480,6 @@ async function cancelBookingInDB(bookingid, userid) {
 }
 
 export default {
-    insertOne,
     checkForValidSessionCookie,
     login,
     logout,

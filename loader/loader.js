@@ -94,33 +94,28 @@ function getDateAtTwelveAM(theDate) {
     return new Date(theDate.getFullYear(), theDate.getMonth(), theDate.getDate(), 0, 0, 0, 0);
 }
 
-function getDateAtRandomTopOfTheHour(theDate) {
-    const randomHour = Math.floor((Math.random() * 23));
-    return new Date(theDate.getFullYear(), theDate.getMonth(), theDate.getDate(), randomHour, 0, 0, 0);
-}
-
 async function insertCustomer(customer) {
     logger.debug('customer to insert = ' + JSON.stringify(customer));
     const dataaccess = await getDataAccess();
-    const customerInserted = await loadUtil.insertOne(dataaccess.dbNames.customerName, customer);
+    const customerInserted = await dataaccess.insertOne(dataaccess.dbNames.customerName, customer);
     logger.debug('customer inserted = ' + JSON.stringify(customerInserted));
 }
 
 async function insertAirportCodeMapping(airportCodeMapping) {
     const dataaccess = await getDataAccess();
-    const airportCodeMappingInserted = await loadUtil.insertOne(dataaccess.dbNames.airportCodeMappingName, airportCodeMapping);
+    const airportCodeMappingInserted = await dataaccess.insertOne(dataaccess.dbNames.airportCodeMappingName, airportCodeMapping);
     logger.debug('airportCodeMapping inserted = ' + JSON.stringify(airportCodeMappingInserted));
 }
 
 async function insertFlightSegment(flightSegment) {
     const dataaccess = await getDataAccess();
-    const flightSegmentInserted = await loadUtil.insertOne(dataaccess.dbNames.flightSegmentName, flightSegment);
+    const flightSegmentInserted = await dataaccess.insertOne(dataaccess.dbNames.flightSegmentName, flightSegment);
     logger.debug('flightSegment inserted = ' + JSON.stringify(flightSegmentInserted));
 }
 
 async function insertFlight(flight) {
     const dataaccess = await getDataAccess();
-    const flightInserted = await loadUtil.insertOne(dataaccess.dbNames.flightName, flight);
+    const flightInserted = await dataaccess.insertOne(dataaccess.dbNames.flightName, flight);
     logger.debug('flight inserted = ' + JSON.stringify(flightInserted));
 }
 
@@ -147,7 +142,6 @@ async function startLoadDatabase(numCustomers) {
                 resolve('Database Finished Loading');
             });
             customerQueue.push(customers);
-            //res.send('Trigger DB loading');
         } catch (error) {
             reject(error);
         }
@@ -158,7 +152,6 @@ function getNumConfiguredCustomers(req, res) {
     res.contentType("text/plain");
     res.send(loaderSettings.MAX_CUSTOMERS.toString());
 }
-
 
 var customerQueue = async.queue(insertCustomer, DATABASE_PARALLELISM);
 customerQueue.drain(function () {
@@ -179,11 +172,6 @@ flightSegmentsQueue.drain(function () {
 });
 
 var flightQueue = async.queue(insertFlight, DATABASE_PARALLELISM);
-//flightQueue.drain = function() {
-//	logger.info('all flights loaded');
-//	logger.info('ending loading database');
-//}
-
 
 var customers = new Array();
 var airportCodeMappings = new Array();
@@ -247,7 +235,6 @@ async function createFlightRelatedData() {
                                     flight._id = uuidv4();
                                     flight.flightSegmentId = flightSegment._id;
                                     // Not using random data to match Java behavior
-                                    //var randomHourDate = getDateAtRandomTopOfTheHour(nowAtMidnight);
                                     flight.scheduledDepartureTime = getDepartureTimeDaysFromDate(nowAtMidnight, kk);
                                     flight.scheduledArrivalTime = getArrivalTime(flight.scheduledDepartureTime, mileage);
                                     flights.push(flight);
@@ -263,57 +250,6 @@ async function createFlightRelatedData() {
                 reject(err);
             });
     });
-
-    // csv()
-    // .from.path('./loader/mileage.csv',{ delimiter: ',' }) 
-    // .on('record', function(data, index) {
-    // 	rows[index] = data;
-    //     logger.debug('#'+index+' '+JSON.stringify(data));
-    // })
-    // .on('end', function(count) {
-    //     logger.debug('Number of lines: ' + count);
-    //     logger.debug('rows.length = ' + rows.length);
-    //     logger.debug('rows = ' + rows);
-    // 	for (var ii = 0; ii < rows[0].length; ii++) {
-    // 		var airportCodeMapping = cloneObjectThroughSerialization(airportCodeMappingTemplate);
-    // 		airportCodeMapping._id = rows[1][ii];
-    // 		airportCodeMapping.airportName = rows[0][ii];
-    // 		airportCodeMappings.push(airportCodeMapping);
-    // 	}
-
-    // 	var flightSegmentId = 0;
-    // 	// actual mileages start on the third (2) row
-    // 	for (var ii = 2; ii < rows.length; ii++) {
-    // 		var fromAirportCode = rows[ii][1];
-    // 		// format of the row is "long airport name name" (0), "airport code" (1), mileage to first airport in rows 0/1 (2), mileage to second airport in rows 0/1 (3), ... mileage to last airport in rows 0/1 (length)
-    // 		for (var jj = 2; jj < rows[ii].length; jj++) {
-    // 			toAirportCode = rows[1][jj-2];
-    // 			mileage = rows[ii][jj];
-    // 			if (mileage != 'NA') {
-    // 				var flightSegment = cloneObjectThroughSerialization(flightSegmentTemplate);
-    // 				flightSegment._id = 'AA' + flightSegmentId++;
-    // 				flightSegment.originPort = fromAirportCode;
-    // 				flightSegment.destPort = toAirportCode;
-    // 				flightSegment.miles = mileage;
-    // 				flightSegments.push(flightSegment);
-
-    // 				for (var kk = 0; kk < loaderSettings.MAX_DAYS_TO_SCHEDULE_FLIGHTS; kk++) {
-    // 					for (var ll = 0; ll < loaderSettings.MAX_FLIGHTS_PER_DAY; ll++) {
-    // 						var flight = cloneObjectThroughSerialization(flightTemplate);
-    // 					    flight._id = uuidv4();
-    // 						flight.flightSegmentId = flightSegment._id;
-    // 						// Not using random data to match Java behavior
-    // 						//var randomHourDate = getDateAtRandomTopOfTheHour(nowAtMidnight);
-    // 						flight.scheduledDepartureTime = getDepartureTimeDaysFromDate(nowAtMidnight, kk);
-    // 						flight.scheduledArrivalTime = getArrivalTime(flight.scheduledDepartureTime, mileage);
-    // 						flights.push(flight);
-    // 					}
-    // 				}
-    // 			}
-    // 		}
-    // 	}
-    // 	callback();
-    // });
 }
 
 export default {
