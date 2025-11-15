@@ -120,20 +120,6 @@ async function initializeDatabaseConnections() {
     logger.debug(`Connected to MongoDB. Obtaining connection to database ${mongo.db}`);
     dbclient = client.db(mongo.db);
 
-    // logger.info("Adding erasureIndexes...");
-    // // Add ensureIndex here
-    // dbclient.ensureIndex(module.dbNames.bookingName, { customerId: 1 }
-    //     , { background: true }, function (err, indexName) {
-    //         logger.info("ensureIndex:" + err + ":" + indexName);
-    //     });
-    // dbclient.ensureIndex(module.dbNames.flightName, { flightSegmentId: 1, scheduledDepartureTime: 2 }
-    //     , { background: true }, function (err, indexName) {
-    //         logger.info("ensureIndex:" + err + ":" + indexName);
-    //     });
-    // dbclient.ensureIndex(module.dbNames.flightSegmentName, { originPort: 1, destPort: 2 }
-    //     , { background: true }, function (err, indexName) {
-    //         logger.info("ensureIndex:" + err + ":" + indexName);
-    //     });
     logger.debug("Finished connecting with success!");
 
 }

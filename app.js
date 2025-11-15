@@ -59,8 +59,8 @@ app.use(cookieParser());                  				// parse cookie
 
 var router = express.Router();
 
-router.post('/login', login);
-router.get('/login/logout', logout);
+router.post('/login', routes.login);
+router.get('/login/logout', routes.logout);
 router.post('/flights/queryflights', routes.checkForValidSessionCookie, routes.queryflights);
 router.post('/bookings/bookflights', routes.checkForValidSessionCookie, routes.bookflights);
 router.post('/bookings/cancelbooking', routes.checkForValidSessionCookie, routes.cancelBooking);
@@ -76,7 +76,6 @@ router.get('/config/countSessions', routes.countCustomerSessions);
 router.get('/config/countFlights', routes.countFlights);
 router.get('/config/countFlightSegments', routes.countFlightSegments);
 router.get('/config/countAirports', routes.countAirports);
-//router.get('/loaddb', startLoadDatabase);
 router.get('/loader/load', loadDatabase);
 router.get('/loader/query', loader.getNumConfiguredCustomers);
 router.get('/checkstatus', checkStatus);
@@ -87,14 +86,6 @@ app.use(settings.contextRoot, router);
 
 function checkStatus(req, res) {
     res.sendStatus(200);
-}
-
-async function login(req, res) {
-    await routes.login(req, res);
-}
-
-async function logout(req, res) {
-    await routes.logout(req, res);
 }
 
 async function loadDatabase(req, res) {
