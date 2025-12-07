@@ -16,11 +16,10 @@
 
 import { parse } from 'csv-parse';
 import log4js from 'log4js';
-import { v4 as uuidv4 } from 'uuid';
 import async from 'async';
 import fs from 'fs';
 import { settings } from '../globals.js';
-import loadUtil from '../routes/index.js';
+import { generateUUID } from '../support.js';
 import getDataAccess from '../dataaccess/dataaccess.js';
 
 
@@ -232,7 +231,7 @@ async function createFlightRelatedData() {
                             for (var kk = 0; kk < loaderSettings.MAX_DAYS_TO_SCHEDULE_FLIGHTS; kk++) {
                                 for (var ll = 0; ll < loaderSettings.MAX_FLIGHTS_PER_DAY; ll++) {
                                     var flight = cloneObjectThroughSerialization(flightTemplate);
-                                    flight._id = uuidv4();
+                                    flight._id = generateUUID();
                                     flight.flightSegmentId = flightSegment._id;
                                     // Not using random data to match Java behavior
                                     flight.scheduledDepartureTime = getDepartureTimeDaysFromDate(nowAtMidnight, kk);

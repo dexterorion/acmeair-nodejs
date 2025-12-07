@@ -14,10 +14,11 @@
 * limitations under the License.
 *******************************************************************************/
 
-import { v4 as uuidv4 } from 'uuid';
+
 import log4js from 'log4js';
 import ttlLruCache from 'ttl-lru-cache';
 import { settings, dbtype } from '../globals.js';
+import { generateUUID } from '../support.js';
 import getDataAccess from '../dataaccess/dataaccess.js';
 
 const flightCache = ttlLruCache({ maxLength: settings.flightDataCacheMaxSize });
@@ -357,7 +358,7 @@ async function createSession(customerId) {
     var now = new Date();
     var later = new Date(now.getTime() + 1000 * 60 * 60 * 24);
 
-    var document = { "_id": uuidv4(), "customerid": customerId, "lastAccessedTime": now, "timeoutTime": later };
+    var document = { "_id": generateUUID(), "customerid": customerId, "lastAccessedTime": now, "timeoutTime": later };
 
     const dataaccess = await getDataAccess();
     await dataaccess.insertOne(dataaccess.dbNames.customerSessionName, document);
@@ -465,7 +466,7 @@ async function getFlightSegmentByOriginPortAndDestPort(fromAirport, toAirport) {
 async function bookFlight(flightId, userid) {
 
     var now = new Date();
-    var docId = uuidv4();
+    var docId = generateUUID();
 
     var document = { "_id": docId, "customerId": userid, "flightId": flightId, "dateOfBooking": now };
 
