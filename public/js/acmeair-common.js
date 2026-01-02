@@ -75,7 +75,7 @@ function signin() {
 	});
 }
 
-function logout() {
+function signout() {
 	updateLoggedInUserWelcome();
 	var loggedinuser = dojo.cookie("loggedinuser");
 	if (loggedinuser == null) {
