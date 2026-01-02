@@ -47,7 +47,7 @@ function updateLoggedInUserWelcome() {
 	}
 }
 
-function signup() {
+function signin() {
 	hideLoginDialog();
 	showLoginWaitDialog();
 	
