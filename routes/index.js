@@ -28,67 +28,82 @@ var flightDataCacheTTL = settings.flightDataCacheTTL == -1 ? null : settings.fli
 var logger = log4js.getLogger('routes');
 logger.level = settings.loggerLevel;
 
-async function checkForValidSessionCookie(req, res, next) {
+async function checkForValidSessionCookieRest(params) {
     logger.debug('checkForValidCookie');
-    var sessionid = req.cookies.sessionid;
+    var sessionid = params.sessionid;
     if (sessionid) {
         sessionid = sessionid.trim();
     }
     if (!sessionid || sessionid == '') {
         logger.debug('checkForValidCookie - no sessionid cookie so returning 403');
-        res.sendStatus(403);
-        return;
+        return { status: 403 };
     }
-    logger.debug("Validating session cookie. Sessionid="+sessionid);
 
+    logger.debug("Validating session cookie. Sessionid="+sessionid);
 
     try {
         const customerid = await validateSession(sessionid);
         if (customerid) {
             logger.debug('checkForValidCookie - good session so allowing next route handler to be called');
-            req.acmeair_login_user = customerid;
-            next();
-            return;
+            return { acmeair_login_user: customerid };
         }
         else {
             logger.debug('checkForValidCookie - bad session so returning 403');
-            res.sendStatus(403);
-            return;
+            return { status: 403 };
         }
     } catch (err) {
         logger.debug('checkForValidCookie - system error validating session so returning 500');
-        res.sendStatus(500);
+        return { status: 500 };
     }
 }
 
-async function login(req, res) {
-    logger.debug('logging in user');
-    var login = req.body.login;
-    var password = req.body.password;
+async function checkForValidSessionCookie(req, res, next) {
+    var result = await checkForValidSessionCookieRest({ sessionid: req.cookies.sessionid });
+    if (result.status) {
+        res.sendStatus(result.status);
+        return;
+    }
+    req.acmeair_login_user = result.acmeair_login_user;
+    next();
+}
 
-    res.cookie('sessionid', '');
+async function loginRest(params) {
+    logger.debug('logging in user');
+    var login = params.login;
+    var password = params.password;
 
     // replace eventually with call to business logic to validate customer
     const customerValid = await validateCustomer(login, password);
     try {
         if (!customerValid) {
-            res.sendStatus(403);
+            return { status: 403 };
         }
         else {
             try {
                 const sessionid = await createSession(login);
-                res.cookie('sessionid', sessionid);
                 logger.debug("Logged in. Session id="+sessionid);
-                res.send('logged in');
+                return { sessionid: sessionid };
             } catch (error) {
                 logger.info(error);
-                res.send(500, error);
+                return { status: 500, error: error };
             }
         }
     } catch (err) {
-        res.send(500, err); // TODO: do I really need this or is there a cleaner way??
+        return { status: 500, error: err };
     }
-};
+}
+
+async function login(req, res) {
+    res.cookie('sessionid', '');
+
+    var result = await loginRest({ login: req.body.login, password: req.body.password });
+    if (result.status) {
+        res.sendStatus(result.status);
+        return;
+    }
+    res.cookie('sessionid', result.sessionid);
+    res.send('logged in');
+}
 
 async function logout(req, res) {
     logger.debug('logging out user');
@@ -461,7 +476,6 @@ async function getFlightSegmentByOriginPortAndDestPort(fromAirport, toAirport) {
     }
     return segment;
 }
-
 
 async function bookFlight(flightId, userid) {
 
