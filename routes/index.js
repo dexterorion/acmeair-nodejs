@@ -105,13 +105,16 @@ async function login(req, res) {
     res.send('logged in');
 }
 
-async function logout(req, res) {
+async function logoutRest(params) {
     logger.debug('logging out user');
-
-    var sessionid = req.cookies.sessionid;
-    // var login = req.body.login;
+    var sessionid = params.sessionid;
     await invalidateSession(sessionid);
-    res.cookie('sessionid', '');
+    return { sessionid: '' };
+}
+
+async function logout(req, res) {
+    var result = await logoutRest({ sessionid: req.cookies.sessionid });
+    res.cookie('sessionid', result.sessionid);
     res.send('logged out');
 };
 
