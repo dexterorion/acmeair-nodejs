@@ -118,15 +118,15 @@ async function logout(req, res) {
     res.send('logged out');
 };
 
-async function queryflights(req, res) {
+async function queryflightsRest(params) {
     logger.debug('querying flights');
 
-    var fromAirport = req.body.fromAirport;
-    var toAirport = req.body.toAirport;
-    var fromDateWeb = new Date(req.body.fromDate);
+    var fromAirport = params.fromAirport;
+    var toAirport = params.toAirport;
+    var fromDateWeb = new Date(params.fromDate);
     var fromDate = new Date(fromDateWeb.getFullYear(), fromDateWeb.getMonth(), fromDateWeb.getDate()); // convert date to local timezone
-    var oneWay = (req.body.oneWay == 'true');
-    var returnDateWeb = new Date(req.body.returnDate);
+    var oneWay = (params.oneWay == 'true');
+    var returnDateWeb = new Date(params.returnDate);
     var returnDate;
     if (!oneWay) {
         returnDate = new Date(returnDateWeb.getFullYear(), returnDateWeb.getMonth(), returnDateWeb.getDate()); // convert date to local timezone
@@ -160,7 +160,7 @@ async function queryflights(req, res) {
                     { "numPages": 1, "flightsOptions": flightsReturn, "currentPage": 0, "hasMoreOptions": false, "pageSize": 10 }
                 ], "tripLegs": 2
         };
-        res.send(options);
+        return { options: options };
     }
     else {
         var options = {
@@ -169,17 +169,28 @@ async function queryflights(req, res) {
                     { "numPages": 1, "flightsOptions": flightsOutbound, "currentPage": 0, "hasMoreOptions": false, "pageSize": 10 }
                 ], "tripLegs": 1
         };
-        res.send(options);
+        return { options: options };
     }
+}
+
+async function queryflights(req, res) {
+    var result = await queryflightsRest({
+        fromAirport: req.body.fromAirport,
+        toAirport: req.body.toAirport,
+        fromDate: req.body.fromDate,
+        oneWay: req.body.oneWay,
+        returnDate: req.body.returnDate
+    });
+    res.send(result.options);
 };
 
-async function bookflights(req, res) {
+async function bookflightsRest(params) {
     logger.debug('booking flights');
 
-    var userid = req.body.userid;
-    var toFlight = req.body.toFlightId;
-    var retFlight = req.body.retFlightId;
-    var oneWay = (req.body.oneWayFlight == 'true');
+    var userid = params.userid;
+    var toFlight = params.toFlightId;
+    var retFlight = params.retFlightId;
+    var oneWay = (params.oneWayFlight == 'true');
 
     logger.debug("toFlight:" + toFlight + ",retFlight:" + retFlight);
 
@@ -188,143 +199,226 @@ async function bookflights(req, res) {
     if (!oneWay) {
         const retBookingId = await bookFlight(retFlight, userid);
         var bookingInfo = { "oneWay": false, "returnBookingId": retBookingId, "departBookingId": toBookingId };
-        res.header('Cache-Control', 'no-cache');
-        res.send(bookingInfo);
+        return bookingInfo;
     } else {
         var bookingInfo = { "oneWay": true, "departBookingId": toBookingId };
-        res.header('Cache-Control', 'no-cache');
-        res.send(bookingInfo);
+        return bookingInfo;
+    }
+};
+
+async function bookflights(req, res) {
+    var result = await bookflightsRest({
+        userid: req.body.userid,
+        toFlightId: req.body.toFlightId,
+        retFlightId: req.body.retFlightId,
+        oneWayFlight: req.body.oneWayFlight
+    });
+    res.header('Cache-Control', 'no-cache');
+    res.send(result);
+};
+
+async function cancelBookingRest(params) {
+    logger.debug('canceling booking');
+
+    var number = params.number;
+    var userid = params.userid;
+
+    try {
+        await cancelBookingInDB(number, userid);
+        return { 'status': 'success' };
+    } catch (error) {
+        return { 'status': 'error' };
     }
 };
 
 async function cancelBooking(req, res) {
-    logger.debug('canceling booking');
+    var result = await cancelBookingRest({
+        number: req.body.number,
+        userid: req.body.userid
+    });
+    res.send(result);
+};
 
-    var number = req.body.number;
-    var userid = req.body.userid;
+async function bookingsByUserRest(params) {
+    logger.debug('listing booked flights by user ' + params.user);
 
     try {
-        await cancelBookingInDB(number, userid);
-        res.send({ 'status': 'success' });
-    } catch (error) {
-        res.send({ 'status': 'error' });
+        const bookings = await getBookingsByUser(params.user);
+        return { bookings: bookings };
+    } catch (err) {
+        return { status: 500 };
     }
 };
 
 async function bookingsByUser(req, res) {
-    logger.debug('listing booked flights by user ' + req.params.user);
+    var result = await bookingsByUserRest({ user: req.params.user });
+    if (result.status) {
+        res.sendStatus(result.status);
+        return;
+    }
+    res.send(result.bookings);
+}
+
+async function getCustomerByIdRest(params) {
+    logger.debug('getting customer by user ' + params.user);
 
     try {
-        const bookings = await getBookingsByUser(req.params.user);
-        res.send(bookings);
+        const customer = await getCustomer(params.user);
+        return { customer: customer };
     } catch (err) {
-        res.sendStatus(500);
+        return { status: 500 };
     }
 };
 
 async function getCustomerById(req, res) {
-    logger.debug('getting customer by user ' + req.params.user);
+    var result = await getCustomerByIdRest({ user: req.params.user });
+    if (result.status) {
+        res.sendStatus(result.status);
+        return;
+    }
+    res.send(result.customer);
+};
+
+async function putCustomerByIdRest(params) {
+    logger.debug('putting customer by user ' + params.user);
 
     try {
-        const customer = await getCustomer(req.params.user);
-        res.send(customer);
+        const customer = await updateCustomer(params.user, params.body);
+        return { customer: customer };
     } catch (err) {
-        res.sendStatus(500);
+        return { status: 500 };
     }
 };
 
 async function putCustomerById(req, res) {
-    logger.debug('putting customer by user ' + req.params.user);
-
-    try {
-        const customer = await updateCustomer(req.params.user, req.body);
-        res.send(customer);
-    } catch (err) {
-        res.sendStatus(500);
+    var result = await putCustomerByIdRest({ user: req.params.user, body: req.body });
+    if (result.status) {
+        res.sendStatus(result.status);
+        return;
     }
+    res.send(result.customer);
 };
 
-async function toGMTString(req, res) {
-    logger.info('******* running eyecatcher function');
-    var now = new Date().toGMTString();
-    res.send(now);
-};
-
-async function getRuntimeInfo(req, res) {
+async function getRuntimeInfoRest(params) {
     var runtimeInfo = [];
     runtimeInfo.push({ "name": "Runtime", "description": "NodeJS" });
     var versions = process.versions;
     for (var key in versions) {
         runtimeInfo.push({ "name": key, "description": versions[key] });
     }
+    return runtimeInfo;
+};
+
+async function getRuntimeInfo(req, res) {
+    var runtimeInfo = await getRuntimeInfoRest({});
     res.contentType('application/json');
     res.send(JSON.stringify(runtimeInfo));
 };
 
-function getDataServiceInfo(req, res) {
+async function getDataServiceInfoRest(params) {
     var dataServices = [{ "name": "cassandra", "description": "Apache Cassandra NoSQL DB" },
     { "name": "cloudant", "description": "IBM Distributed DBaaS" },
     { "name": "mongo", "description": "MongoDB NoSQL DB" }];
+    return dataServices;
+};
+
+async function getDataServiceInfo(req, res) {
+    var dataServices = await getDataServiceInfoRest({});
     res.send(JSON.stringify(dataServices));
 };
 
-function getActiveDataServiceInfo(req, res) {
+function getActiveDataServiceInfoRest(params) {
+    return dbtype;
+};
+
+async function getActiveDataServiceInfo(req, res) {
+    var dbtype = getActiveDataServiceInfoRest({});
     res.send(dbtype);
 };
 
-async function countBookings(req, res) {
+async function countBookingsRest(params) {
     try {
         const count = await countBookingsDB();
-        res.send(count.toString());
+        return count.toString();
     } catch (error) {
-        res.send("-1");
+        return "-1";
+    }
+};
+
+async function countBookings(req, res) {
+    var count = await countBookingsRest({});
+    res.send(count);
+};
+
+async function countCustomerRest(params) {
+    try {
+        const count = await countCustomersDB();
+        return count.toString();
+    } catch (error) {
+        return "-1";
     }
 };
 
 async function countCustomer(req, res) {
+    var count = await countCustomerRest({});
+    res.send(count);
+};
+
+async function countCustomerSessionsRest(params) {
     try {
-        const count = await countCustomersDB();
-        res.send(count.toString());
+        const count = await countCustomerSessionsDB();
+        return count.toString();
     } catch (error) {
-        res.send("-1");
+        return "-1";
     }
 };
 
 async function countCustomerSessions(req, res) {
+    var count = await countCustomerSessionsRest({});
+    res.send(count);
+};
+
+async function countFlightsRest(params) {
     try {
-        const count = await countCustomerSessionsDB();
-        res.send(count.toString());
+        const count = await countFlightsDB();
+        return count.toString();
     } catch (error) {
-        res.send("-1");
+        return "-1";
     }
 };
 
 async function countFlights(req, res) {
+    var count = await countFlightsRest({});
+    res.send(count);
+};
+
+async function countFlightSegmentsRest(params) {
     try {
-        const count = await countFlightsDB();
-        res.send(count.toString());
+        const count = await countFlightSegmentsDB();
+        return count.toString();
     } catch (error) {
-        res.send("-1");
+        return "-1";
     }
 };
 
 async function countFlightSegments(req, res) {
+    var count = await countFlightSegmentsRest({});
+    res.send(count);
+};
+
+async function countAirportsRest(params) {
     try {
-        const count = await countFlightSegmentsDB();
-        res.send(count.toString());
+        const count = await countAirportsDB();
+        return count.toString();
     } catch (error) {
-        res.send("-1");
+        console.log(error);
+        return "-1";
     }
 };
 
 async function countAirports(req, res) {
-    try {
-        const count = await countAirportsDB();
-        res.send(count.toString());
-    } catch (error) {
-        console.log(error);
-        res.send("-1");
-    }
+    var count = await countAirportsRest({});
+    res.send(count);
 };
 
 async function countBookingsDB() {
@@ -507,7 +601,6 @@ export default {
     bookingsByUser,
     getCustomerById,
     putCustomerById,
-    toGMTString,
     getRuntimeInfo,
     getDataServiceInfo,
     getActiveDataServiceInfo,
