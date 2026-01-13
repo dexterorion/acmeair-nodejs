@@ -88,9 +88,14 @@ function checkStatus(req, res) {
     res.sendStatus(200);
 }
 
-async function loadDatabase(req, res) {
+async function loadDatabaseRest(params) {
     logger.info("Started to load database...");
-    const result = await loader.startLoadDatabase(req.query.numCustomers);
+    const result = await loader.startLoadDatabase(params.numCustomers);
+    return result;
+}
+
+async function loadDatabase(req, res) {
+    var result = await loadDatabaseRest({ numCustomers: req.query.numCustomers });
     res.send(result);
 }
 
