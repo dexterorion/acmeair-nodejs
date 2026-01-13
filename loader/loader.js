@@ -21,6 +21,7 @@ import fs from 'fs';
 import { settings } from '../globals.js';
 import { generateUUID } from '../support.js';
 import getDataAccess from '../dataaccess/dataaccess.js';
+import { get } from 'http';
 
 
 var logger = log4js.getLogger('loader');
@@ -147,9 +148,15 @@ async function startLoadDatabase(numCustomers) {
     });
 }
 
+function getNumConfiguredCustomersRest(params) {
+    return loaderSettings.MAX_CUSTOMERS.toString();
+}
+
 function getNumConfiguredCustomers(req, res) {
+    var maxCustomers = getNumConfiguredCustomersRest({});
+
     res.contentType("text/plain");
-    res.send(loaderSettings.MAX_CUSTOMERS.toString());
+    res.send(maxCustomers);
 }
 
 var customerQueue = async.queue(insertCustomer, DATABASE_PARALLELISM);
